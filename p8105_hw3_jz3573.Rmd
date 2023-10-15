@@ -25,7 +25,6 @@ cleaned_brfss_smart2010 <-brfss_smart2010 %>%
     response= factor(response, levels=c("Poor", "Fair", "Good", "Very Good", "Excellent"), ordered = TRUE)
   )
 ```
-如何改正这里，让order能出现？
 
 ## In 2002, which states were observed at 7 or more locations? What about in 2010?
 ```{r count the different locations in 2002 }
@@ -74,7 +73,7 @@ ggplot(ny_df,aes (x=response, y=data_value, color=locationdesc)) +geom_point()+t
 
 # Question 3 
 
-## Load,tidy, merge and organize the data sets.
+## Part 1:  Load,tidy, merge and organize the data sets.
 
 ### load the dataset
 ```{r load the demographic dataset}
@@ -108,7 +107,8 @@ merged=full_join(demo,acce,by="seqn") %>%
 
 ```
 
-## Produce a reader-friendly table for the number of men and women in each education category
+##  Part 2
+### Produce a reader-friendly table for the number of men and women in each education category
 ```{r create a dataframe}
 gen_edu<-merged %>% 
   drop_na() %>% 
@@ -122,7 +122,7 @@ knitr::kable(gen_edu, caption =  "Number of Men and Women in each Education Cate
 ```
 
 
-## create a histgram of the age distributions for men and women in each education category. 
+### create a histgram of the age distributions for men and women in each education category. 
 ```{r create a histgram}
 age_sex_edu_plot <- merged %>% 
 ggplot(aes(x=age,fill=sex)) + geom_histogram()+
@@ -131,4 +131,56 @@ ggplot(aes(x=age,fill=sex)) + geom_histogram()+
 
 age_sex_edu_plot
 ```
+
+
 The table illustrates the distribution of the sex and gender distribution on education. Aaccoding to the graph, "more than high school" has the most people in both gender. Woman and man in 20 to 40 are most likely to receive " higher than high school" educaiton than other age group. 
+
+
+## Part 3 : a total activity table 
+
+### create a dataframe
+```{r create a dataframe for total activities}
+act_df<- merged %>% 
+  mutate(
+    total_activity =rowSums(across(min1:min1440),na.rm = TRUE))
+```
+
+### create a graph
+```{r create a graph for total activities}
+ggplot(act_df,aes(x=age,y=total_activity,color=sex))+
+  geom_point(alpha=.5)+
+  facet_wrap(~education)+
+  geom_smooth()+
+  labs(title = "Total Activity by Age, Gender and Education ")
+```
+
+According to the graph, in the "high school or equvilant " group, female has more active time than male. and the total activity time increase by age before 40, decrease after 40. In the less than high school group, male has more active time than womane, the active time decrease by age. In the more than high school group, female has more active time than male. The variation in this group larger than the variations in other two groups. 
+
+
+## Part 4: 24-hour activity graph
+
+### reshape the dataframe
+```{r reshape the dataframe}
+hourly_df<- merged %>% 
+  pivot_longer(cols=starts_with("min"), names_to = "minute", values_to = "activity") %>% 
+  mutate(
+    minute= as.numeric(gsub("min","",minute)),
+    hour = minute %/% 60) %>% 
+    group_by (education , sex, hour ) %>% 
+    summarise(mean_activity= mean(activity),.groups = "drop")
+   
+
+```
+
+```{r create the three-panel plot}
+hourly_df %>%
+  ggplot(aes(x = hour, y = mean_activity, color = sex)) +
+  geom_line() +
+  geom_smooth() +  
+  facet_wrap(~education, scales = "free") +
+  labs(x = "Hour of the Day", y = "Mean Activity Level") +
+  theme_minimal()
+```
+
+
+All three education groups and two gender share the same bell-shape of 24-hour activity timetable. People are most active between 10:00 to 20:00. Female are more active than male in three education groups.  
